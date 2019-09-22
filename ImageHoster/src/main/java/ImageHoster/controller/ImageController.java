@@ -5,6 +5,7 @@ import ImageHoster.model.Tag;
 import ImageHoster.model.User;
 import ImageHoster.service.ImageService;
 import ImageHoster.service.TagService;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -35,8 +36,22 @@ public class ImageController {
         return "images";
     }
 
+    //TO display the Image and its details on clicking the Title link given
+    //The logic is to get the image from the database with corresponding id. After getting the image from the database the details are shown
+    //First receive the dynamic parameter in the incoming request URL in a string variable 'title' , 'id' and also the Model type object
+    //Call the getImageByTitle() method in the business logic to fetch all the details of that image
+    //Add the image in the Model type object with 'image' as the key
+    //Return 'images/image.html' page
+    @RequestMapping("images/{id}/{title}")
+    public String showUniqueImage(@PathVariable("title") String title,@PathVariable("id") int id,Model model) {
+        Image unique_image = imageService.getImage(id);
+        model.addAttribute("image", unique_image);
+        model.addAttribute("tags", unique_image.getTags());
+        return "images/image";
+    }
+
     //This method is called when the details of the specific image with corresponding title are to be displayed
-    //The logic is to get the image from the databse with corresponding title. After getting the image from the database the details are shown
+    //The logic is to get the image from the database with corresponding title. After getting the image from the database the details are shown
     //First receive the dynamic parameter in the incoming request URL in a string variable 'title' and also the Model type object
     //Call the getImageByTitle() method in the business logic to fetch all the details of that image
     //Add the image in the Model type object with 'image' as the key
@@ -84,7 +99,6 @@ public class ImageController {
         imageService.uploadImage(newImage);
         return "redirect:/images";
     }
-
     //This controller method is called when the request pattern is of type 'editImage'
     //This method fetches the image with the corresponding id from the database and adds it to the model with the key as 'image'
     //The method then returns 'images/edit.html' file wherein you fill all the updated details of the image
@@ -92,13 +106,23 @@ public class ImageController {
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(@RequestParam("imageId") Integer imageId, HttpSession session, Model model) {
         Image image = imageService.getImage(imageId);
-
-        String tags = convertTagsToString(image.getTags());
-        model.addAttribute("image", image);
-        model.addAttribute("tags", tags);
-        return "images/edit";
+        User loggedin = (User) session.getAttribute("loggeduser");
+        //checking if the logged in user is same as the one who uploaded the image to edit it.
+        if(image.getUser().getId().equals(loggedin.getId())) {
+            String tags = convertTagsToString(image.getTags());
+            model.addAttribute("image", image);
+            model.addAttribute("tags", tags);
+            return "images/edit";
+        }
+        else {
+            String error = "Only the owner of the image can edit the image";
+            model.addAttribute("image", image);
+            model.addAttribute("tags", image.getTags());
+            model.addAttribute("editError", error);
+            return "images/image";
+        }
     }
 
     //This controller method is called when the request pattern is of type 'images/edit' and also the incoming request is of PUT type
@@ -140,9 +164,21 @@ public class ImageController {
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
-        imageService.deleteImage(imageId);
-        return "redirect:/images";
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId,HttpSession session, Model model) {
+        Image image = imageService.getImage(imageId);
+        User loggedin = (User) session.getAttribute("loggeduser");
+        //checking if the logged in user is same as the one who uploaded the image
+        if(image.getUser().getId() == loggedin.getId()) {
+            imageService.deleteImage(imageId);
+            return "redirect:/images";
+        }
+        else {
+            String error = "Only the owner of the image can delete the image";
+            model.addAttribute("image", image);
+            model.addAttribute("tags", image.getTags());
+            model.addAttribute("deleteError", error);
+            return "images/image";
+        }
     }
 
 
