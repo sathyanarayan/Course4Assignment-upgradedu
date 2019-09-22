@@ -45,15 +45,16 @@ public class UserController {
     @RequestMapping(value = "users/registration", method = RequestMethod.POST)
     public String registerUser(User user, Model model) {
         String password = user.getPassword();
-        if(isPasswordValid(password))
-        {userService.registerUser(user);
-        return "redirect:/users/login";
+        if(isPasswordValid(password)){
+            userService.registerUser(user);
+            return "redirect:/users/login";
         }
-        else
-        {   String error = "Password must contain atleast 1 alphabet, 1 number & 1 special character";
+        else {   
+            String error = "Password must contain atleast 1 alphabet, 1 number & 1 special character";
             model.addAttribute("User", user);
             model.addAttribute("passwordTypeError", error);
-            return "users/registration";}
+            return "users/registration";
+        }
     }
 
     //This controller method is called when the request pattern is of type 'users/login'
