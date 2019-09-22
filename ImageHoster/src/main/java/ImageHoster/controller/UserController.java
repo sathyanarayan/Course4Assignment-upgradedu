@@ -13,10 +13,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.servlet.http.HttpSession;
 import java.util.List;
+import java.util.regex.Pattern;
 
 
 @Controller
 public class UserController {
+
+    public final Pattern passwordpattern = Pattern.compile("^(?=.*[a-z])(?=.*[@#$%^&*!~`])(?=.*[A-Z])(?=.*\\d).+$");
 
     @Autowired
     private UserService userService;
@@ -40,9 +43,17 @@ public class UserController {
     //This controller method is called when the request pattern is of type 'users/registration' and also the incoming request is of POST type
     //This method calls the business logic and after the user record is persisted in the database, directs to login page
     @RequestMapping(value = "users/registration", method = RequestMethod.POST)
-    public String registerUser(User user) {
-        userService.registerUser(user);
+    public String registerUser(User user, Model model) {
+        String password = user.getPassword();
+        if(isPasswordValid(password))
+        {userService.registerUser(user);
         return "redirect:/users/login";
+        }
+        else
+        {   String error = "Password must contain at least 1 alphabet, 1 number & 1 special character";
+            model.addAttribute("User", user);
+            model.addAttribute("passwordTypeError", error);
+            return "users/registration";}
     }
 
     //This controller method is called when the request pattern is of type 'users/login'
@@ -78,5 +89,10 @@ public class UserController {
         List<Image> images = imageService.getAllImages();
         model.addAttribute("images", images);
         return "index";
+    }
+
+
+    public boolean isPasswordValid(String textToCheck) {
+        return passwordpattern.matcher(textToCheck).matches();
     }
 }
